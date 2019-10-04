@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # usage: bin/compile <build-dir> <cache-dir> <env-dir>
 
-set -eo pipefail
+set -euo pipefail
 
 function arrow() {
-  sed -u 's/^/----->  /'
+  sed -u 's/^/-----> /'
 }
 
 function indent() {
@@ -20,47 +20,42 @@ BUILD_DIR=$1
 CACHE_DIR=$2
 ENV_DIR=$3
 
-NIM_DIR=$CACHE_DIR/Nim
+BUILD_PACK_PATH=$(cd $(dirname $(dirname $0)); pwd)
+
+NIM_VER=1.0.0
+NIM_DIR=$CACHE_DIR/nim
+NIM_CACHE_DIR=$CACHE_DIR/nimcache
+
 NIM_BIN=$NIM_DIR/bin/nim
+NIMBLE_BIN=$NIM_DIR/bin/nimble
 
-NIMBLE_DIR=$CACHE_DIR/.nimble
-NIMBLE_BIN=$NIMBLE_DIR/bin/nimble
-
-PATH="$NIM_DIR/bin:$NIMBLE_DIR/bin:$PATH"
+PATH="$NIM_DIR/bin:$PATH"
 export PATH
 
+echo "Setting up Nim environment..." | arrow
+
+echo "Setting up link to nim cache..." | indent
+mkdir -p $NIM_CACHE_DIR
+mkdir -p $HOME/.cache
+ln -s $NIM_CACHE_DIR $HOME/.cache/nim
+
+echo "Setting up nimble.ini and .nimble dir..." | indent
+mkdir -p $CACHE_DIR/.nimble
 mkdir -p $HOME/.config/nimble
-cat <<EOF > $HOME/.config/nimble/nimble.ini
-nimbleDir = r"$NIMBLE_DIR"
+cat > $HOME/.config/nimble/nimble.ini <<EOF
+nimbleDir = "$CACHE_DIR/.nimble"
 EOF
 
 if [ ! -x $NIM_BIN ]; then
-    nim_repo=$(cat_or $ENV_DIR/NIM_REPO "git://github.com/Araq/Nim.git")
-    nim_branch=$(cat_or $ENV_DIR/NIM_BRANCH "master")
-    nim_csources=$(cat_or $ENV_DIR/NIM_CSOURCES "git://github.com/nim-lang/csources.git")
-
-    echo "Installing Nim..." | arrow
-
-    git clone --depth 1 --branch $nim_branch $nim_repo $NIM_DIR
-    cd $NIM_DIR
-    git clone --depth 1 $nim_csources csources
-    cd csources && sh build.sh
-    cd ..
-    bin/nim c koch
-    ./koch boot -d:release
-
-
-    echo "using ${nim_repo} @${nim_branch}" | indent
+    echo "Installing Nim v$NIM_VER from x64 binary tarball..." | arrow
+    cd $CACHE_DIR
+    wget -nv https://nim-lang.org/download/nim-$NIM_VER-linux_x64.tar.xz
+    mkdir $NIM_DIR
+    tar -xf nim-$NIM_VER-linux_x64.tar.xz -C $NIM_DIR --strip 1
 fi
 
-if [ ! -x $NIMBLE_BIN ]; then
-    echo "Installing Nimble..." | arrow
-    nimble_repo=$(cat_or $ENV_DIR/NIMBLE_REPO "git://github.com/nim-lang/nimble.git")
-    git clone --depth 1 $nimble_repo $CACHE_DIR/nimble
-    cd $CACHE_DIR/nimble
-    $NIM_BIN c -r src/nimble install -y
-fi
-
+echo "Writing export for multi-buildpack support" | indent
+echo "export PATH=${NIM_DIR}/bin:\$PATH" > $BUILD_PACK_PATH/export
 
 echo "Building app" | arrow
 cd $BUILD_DIR
