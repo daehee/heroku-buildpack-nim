@@ -59,4 +59,4 @@ echo "export PATH=${NIM_DIR}/bin:\$PATH" > $BUILD_PACK_PATH/export
 
 echo "Building app" | arrow
 cd $BUILD_DIR
-$NIMBLE_BIN build --accept
+$NIMBLE_BIN release --accept

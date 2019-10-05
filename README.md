@@ -11,12 +11,29 @@ Usage
 The buildpack expects you to include a `.nimble` file in order to
 download dependencies and build your app.
 
-
 Be sure to set the
 [bin](https://github.com/nim-lang/nimble#binary-packages) value on
 your nimble file to the executable name for your app.
 
-And create a `Procfile` with a process to run for your executable:
+You must also create a `release` nimble task to provide instructions
+to this buildpack on how to compile your app. For example:
+
+```nimble
+task release, "Build a production release":
+  --verbose
+  --forceBuild:on
+  --opt:speed
+  --threads:on
+  --define:release
+  --define:ssl
+  --hints:off
+  --outdir:"."
+  setCommand "c", "src/main.nim"
+```
+
+**Note:** Without this `task`, nimble will NOT be able to build your release.
+
+Finally, create a `Procfile` with a process to run for your executable:
 
 ```yaml
 web: ./main
