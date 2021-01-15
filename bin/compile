@@ -22,7 +22,7 @@ ENV_DIR=$3
 
 BUILD_PACK_PATH=$(cd $(dirname $(dirname $0)); pwd)
 
-NIM_VER=1.0.0
+NIM_VER=1.4.2
 NIM_DIR=$CACHE_DIR/nim
 NIM_CACHE_DIR=$CACHE_DIR/nimcache
 
